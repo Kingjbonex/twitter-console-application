@@ -26,3 +26,10 @@ jobs:
       run: dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
+    - name: Publish
+      run: dotnet publish TwitterCLI -c Release /p:PublishSingleFile=true --output Artifacts --no-build
+    - name: Upload
+      uses: actions/upload-artifact@v2
+      with: 
+        name: TwitterCLI
+        path: Artifacts
