@@ -1,5 +1,11 @@
 # twitter-console-application
-A Twitter .net core console application that streams tweets from Twitter's Sample v2 API and performs statistical analysis.
+A Twitter .net core console application.
+
+## Features
+Using the Twitter API v2 sampled stream endpoint, the application keeps track of the following:
+
+* Total number of tweets received 
+* Top 10 Hashtags
 
 ## Setting up Developer Environment
 
