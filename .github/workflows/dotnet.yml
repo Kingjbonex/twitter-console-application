@@ -27,7 +27,7 @@ jobs:
     - name: Test
       run: dotnet test --no-build --verbosity normal
     - name: Publish
-      run: dotnet publish TwitterCLI -c Release /p:PublishSingleFile=true --output Artifacts --no-build
+      run: dotnet publish TwitterCLI -r win-x64 -c Release /p:PublishSingleFile=true --output Artifacts --no-build
     - name: Upload
       uses: actions/upload-artifact@v2
       with: 
