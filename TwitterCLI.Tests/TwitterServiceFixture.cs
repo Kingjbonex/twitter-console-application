@@ -11,7 +11,7 @@ namespace TwitterCLI.Tests
         [Test]
         public void Constructor_ShouldThrow_WhenSampleStreamIsNull()
         {
-            Mock<TwitterCache> twitterCacheMock = new Mock<TwitterCache>();
+            Mock<ITwitterCache> twitterCacheMock = new Mock<ITwitterCache>();
             Mock<ILogger<TwitterService>> loggerMock = new Mock<ILogger<TwitterService>>();
 
             Assert.That(() =>
@@ -36,7 +36,7 @@ namespace TwitterCLI.Tests
         public void Constructor_ShouldThrow_WhenLoggerIsNull()
         {
             Mock<ISampleStreamV2> sampleStreamV2CacheMock = new Mock<ISampleStreamV2>();
-            Mock<TwitterCache> twitterCacheMock = new Mock<TwitterCache>();
+            Mock<ITwitterCache> twitterCacheMock = new Mock<ITwitterCache>();
 
             Assert.That(() =>
             {
@@ -45,10 +45,10 @@ namespace TwitterCLI.Tests
         }
 
         [Test]
-        public async Task DoWorkAsync_DoesNotThrow_WhenAllDependenciesAreSet()
+        public void DoWorkAsync_DoesNotThrow_WhenAllDependenciesAreSet()
         {
             Mock<ISampleStreamV2> sampleStreamV2CacheMock = new Mock<ISampleStreamV2>();
-            Mock<TwitterCache> twitterCacheMock = new Mock<TwitterCache>();
+            Mock<ITwitterCache> twitterCacheMock = new Mock<ITwitterCache>();
             Mock<ILogger<TwitterService>> loggerMock = new Mock<ILogger<TwitterService>>();
 
             var uut = new TwitterService(sampleStreamV2CacheMock.Object, twitterCacheMock.Object, loggerMock.Object);

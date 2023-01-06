@@ -1,4 +1,6 @@
-﻿using NUnit.Framework;
+﻿using Microsoft.Extensions.DependencyInjection;
+using NUnit.Framework;
+using Tweetinvi.Streaming.V2;
 
 namespace TwitterCLI.Tests
 {
@@ -6,8 +8,12 @@ namespace TwitterCLI.Tests
     public class ProgramHostFixture
     {
         [Test]
-        public void StartAsync_ShouldStart()
+        public void CreateHostBuilder_ShouldResolveAllServices_When()
         {
+            var hostBuilder = Program.CreateHostBuilder(null);
+
+            Assert.That(() => hostBuilder.Build().Services.GetService<ISampleStreamV2>(), Is.Not.Null);
+
         }
     }
 }
