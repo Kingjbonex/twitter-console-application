@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TwitterCLI": {
+      "commandName": "Project",
+      "commandLineArgs": "sample"
+    }
+  }
+}

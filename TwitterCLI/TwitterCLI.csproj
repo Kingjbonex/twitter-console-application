@@ -12,6 +12,8 @@
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
 		<PackageReference Include="Spectre.Console" Version="0.45.0" />
+		<PackageReference Include="Spectre.Console.Cli" Version="0.45.0" />
+		<PackageReference Include="Spectre.Console.Extensions.Hosting" Version="0.2.0" />
 		<PackageReference Include="Spectre.Console.Extensions.Table" Version="1.0.0" />
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
 		<PackageReference Include="TweetinviAPI" Version="5.0.4" />
