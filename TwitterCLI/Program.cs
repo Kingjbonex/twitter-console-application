@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using System.Configuration;
 using Tweetinvi;
 using Tweetinvi.Streaming.V2;
 using TwitterCLI;
@@ -20,7 +21,7 @@ namespace TwitterCLI
             return Environment.ExitCode;
         }
 
-        private static IHostBuilder CreateHostBuilder(string[] args)
+        public static IHostBuilder CreateHostBuilder(string[] args)
         {
             var builder = new HostBuilder()
                .ConfigureHostConfiguration(configHost =>
@@ -28,27 +29,32 @@ namespace TwitterCLI
                    configHost.SetBasePath(Directory.GetCurrentDirectory());
                    configHost.AddUserSecrets<Program>();
                })
-               .ConfigureServices((services) =>
+               .ConfigureServices((hostContext, services) =>
                {
-                   var serviceProvider = services.BuildServiceProvider();
-                   var config = serviceProvider.GetService<IConfiguration>();
-                   string twitterKey = config.GetValue<string>("twitter_api_key"); // TODO: Handle Null values from configs to avoid failures down the line calling TwitterClient
-                   string secretKey = config.GetValue<string>("twitter_secret_key");
-                   string bearerToken = config.GetValue<string>("twitter_bearer_token");
+                   string? twitterKey = hostContext.Configuration.GetValue<string>("twitter_api_key");
+                   string? secretKey = hostContext.Configuration.GetValue<string>("twitter_secret_key");
+                   string? bearerToken = hostContext.Configuration.GetValue<string>("twitter_bearer_token");
                    services.AddMemoryCache();
-                   services.AddSingleton<TwitterCache>();
+                   services.AddSingleton<ITwitterCache, TwitterCache>();
                    services.AddScoped<IScopedProcessingService, TwitterService>();
                    services.AddHostedService<ConsoleService>();
                    services.TryAddScoped<ISampleStreamV2>(s =>
                    {
-                       return s.GetService<TwitterClient>().StreamsV2.CreateSampleStream();
+                       return s.GetService<TwitterClient>()!.StreamsV2.CreateSampleStream();
                    });
                    services.TryAddTransient<Tweetinvi.Models.IReadOnlyConsumerCredentials>(s =>
                    {
-                       return new Tweetinvi.Models.ConsumerOnlyCredentials(twitterKey, secretKey)
+                       if (twitterKey != null && secretKey != null && bearerToken != null)
                        {
-                           BearerToken = bearerToken,
-                       };
+                           return new Tweetinvi.Models.ConsumerOnlyCredentials(twitterKey, secretKey)
+                           {
+                               BearerToken = bearerToken,
+                           };
+                       }
+                       else
+                       {
+                           throw new ConfigurationErrorsException("User Secrets have not been set. Please refer to the README.md to set up secrets for this application.");
+                       }
                    });
                    services.TryAddTransient<TwitterClient>(s =>
                    {

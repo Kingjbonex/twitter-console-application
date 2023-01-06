@@ -14,7 +14,7 @@ namespace TwitterCLI
     /// </summary>
     public class TwitterService : IScopedProcessingService
     {
-        private TwitterCache _memCache;
+        private ITwitterCache _memCache;
         private ILogger<TwitterService> _logger;
         private ISampleStreamV2 _sampleStream;
         private int tweetCount = 0;
@@ -27,7 +27,7 @@ namespace TwitterCLI
         /// <param name="memCache">A Memory Cache to save the twitter stream data.</param>
         /// <param name="logger">Logger with the context of <see cref="TwitterService"/>.</param>
         /// <exception cref="ArgumentNullException">Thrown when any parameter passed in is null.</exception>
-        public TwitterService(ISampleStreamV2 sampleStream, TwitterCache memCache, ILogger<TwitterService> logger)
+        public TwitterService(ISampleStreamV2 sampleStream, ITwitterCache memCache, ILogger<TwitterService> logger)
         {
             _sampleStream = sampleStream ?? throw new ArgumentNullException(nameof(sampleStream));
             _memCache = memCache ?? throw new ArgumentNullException(nameof(memCache));
@@ -41,10 +41,11 @@ namespace TwitterCLI
         /// <returns></returns>
         public Task DoWorkAsync(CancellationToken stoppingToken)
         {
+            _logger.LogDebug("Starting the Twitter V2 Sample Stream");
             _sampleStream.TweetReceived += (sender, eventArgs) =>
             {
                 tweetCount++;
-                _memCache.MemoryCache.Set("Tweet Count", tweetCount);
+                _memCache.MemoryCache.Set(_memCache.TweetCountKey, tweetCount);
                 if (eventArgs.Tweet.Entities.Hashtags != null)
                 {
                     foreach (Tweetinvi.Models.V2.HashtagV2 hashtag in eventArgs.Tweet.Entities.Hashtags)
@@ -58,7 +59,7 @@ namespace TwitterCLI
                             hashTags[hashtag.Tag] = 1;
                         }
                     }
-                    _memCache.MemoryCache.Set("Hashtags", hashTags);
+                    _memCache.MemoryCache.Set(_memCache.HashtagsKey, hashTags);
                 }
             };
             return _sampleStream.StartAsync();

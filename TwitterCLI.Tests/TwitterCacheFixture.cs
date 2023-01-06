@@ -1,4 +1,7 @@
-﻿using NUnit.Framework;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using Moq;
+using NUnit.Framework;
 
 namespace TwitterCLI.Tests
 {

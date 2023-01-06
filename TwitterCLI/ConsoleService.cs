@@ -9,11 +9,11 @@ namespace TwitterCLI
     public class ConsoleService : BackgroundService
     {
         private readonly ILogger<ConsoleService> _logger;
-        private TwitterCache _memCache;
+        private ITwitterCache _memCache;
 
         public IServiceProvider Services { get; }
 
-        public ConsoleService(IServiceProvider services, TwitterCache memCache, ILogger<ConsoleService> logger)
+        public ConsoleService(IServiceProvider services, ITwitterCache memCache, ILogger<ConsoleService> logger)
         {
             Services = services ?? throw new ArgumentNullException(nameof(services));
             _memCache = memCache ?? throw new ArgumentNullException(nameof(memCache));
@@ -24,8 +24,8 @@ namespace TwitterCLI
         {
             _ = Task.Run(() => SampleTweetsAsync(cancellationToken));
 
-            string? tweetCount = "0";
-            Dictionary<string, int> hashtags = null;
+            int tweetCount = 0;
+            Dictionary<string, int>? hashtags = new Dictionary<string, int>();
 
             var table = new Table().Expand().BorderColor(Color.Grey);
             table.AddColumn(new TableColumn(new Panel("[yellow]Hashtag Count[/]").BorderColor(Color.Blue)).Footer("Tweet Count"));
@@ -45,17 +45,14 @@ namespace TwitterCLI
             AnsiConsole.Status()
                 .Start("Thinking...", ctx =>
                 {
-                    // Simulate some work
-                    AnsiConsole.MarkupLine("Doing some work...");
+                    AnsiConsole.MarkupLine("Starting up Twitter Sample Stream...");
                     Thread.Sleep(1000);
 
-                    // Update the status and spinner
-                    ctx.Status("Thinking some more");
+                    ctx.Status("Waiting for Sample Data to stream in...");
                     ctx.Spinner(Spinner.Known.Star);
                     ctx.SpinnerStyle(Style.Parse("green"));
 
-                    // Simulate some work
-                    AnsiConsole.MarkupLine("Doing some more work...");
+                    AnsiConsole.MarkupLine("Twitter Sample Data is streaming in...");
                     Thread.Sleep(2000);
                 });
 
@@ -63,21 +60,23 @@ namespace TwitterCLI
                 .AutoClear(false)
                 .Overflow(VerticalOverflow.Ellipsis)
                 .Cropping(VerticalOverflowCropping.Bottom)
-                .StartAsync(async ctx =>
+                .StartAsync(ctx =>
                 {
                     ctx.Refresh();
-                    while (true)
+                    while (!cancellationToken.IsCancellationRequested)
                     {
                         try
                         {
-                            tweetCount = _memCache.MemoryCache.Get("Tweet Count") == null ? "0" : Convert.ToString(_memCache.MemoryCache.Get("Tweet Count"));
-                            table.Columns[1].Footer = new Text(tweetCount);
+                            if (_memCache.MemoryCache.TryGetValue<int>(_memCache.TweetCountKey, out tweetCount))
+                            {
+                                table.Columns[1].Footer = new Text(tweetCount.ToString());
+                            }
 
-                            if(_memCache.MemoryCache.TryGetValue<Dictionary<string, int>>("Hashtags", out hashtags))
+                            if (_memCache.MemoryCache.TryGetValue<Dictionary<string, int>>(_memCache.HashtagsKey, out hashtags))
                             {
                                 var sortedList = from kvp in hashtags
-                                                    orderby kvp.Value descending
-                                                    select kvp;
+                                                 orderby kvp.Value descending
+                                                 select kvp;
 
                                 int j = 0;
                                 foreach (KeyValuePair<string, int> kvp in sortedList.Take(10))
@@ -91,17 +90,11 @@ namespace TwitterCLI
                         }
                         catch (Exception ex)
                         {
-                            AnsiConsole.WriteException(ex);
-                        }                        
+                            _logger.LogError(ex, "An unexpected error occurred while attempting to refresh the console.");
+                        }
                     }
+                    return Task.CompletedTask;
                 });
-            }
-
-        public override async Task StopAsync(CancellationToken cancellationToken)
-        {
-            _logger.LogInformation("Console Service is stopping.");
-
-            await base.StopAsync(cancellationToken);
         }
 
         private Task SampleTweetsAsync(CancellationToken stoppingToken)

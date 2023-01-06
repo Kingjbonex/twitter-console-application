@@ -10,7 +10,7 @@ namespace TwitterCLI.Tests
         [Test]
         public void Constructor_ShouldThrow_WhenServiceProviderIsNull()
         {
-            Mock<TwitterCache> twitterCacheMock = new Mock<TwitterCache>();
+            Mock<ITwitterCache> twitterCacheMock = new Mock<ITwitterCache>();
             Mock<ILogger<ConsoleService>> loggerMock = new Mock<ILogger<ConsoleService>>();
 
             Assert.That(() =>
@@ -35,7 +35,7 @@ namespace TwitterCLI.Tests
         public void Constructor_ShouldThrow_WhenLoggerIsNull()
         {
             Mock<IServiceProvider> serviceProviderCacheMock = new Mock<IServiceProvider>();
-            Mock<TwitterCache> twitterCacheMock = new Mock<TwitterCache>();
+            Mock<ITwitterCache> twitterCacheMock = new Mock<ITwitterCache>();
 
             Assert.That(() =>
             {
