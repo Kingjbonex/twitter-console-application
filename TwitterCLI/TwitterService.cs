@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Logging;
 using Tweetinvi.Streaming.V2;
 
 namespace TwitterCLI;
@@ -10,34 +9,31 @@ namespace TwitterCLI;
 public class TwitterService : IScopedProcessingService
 {
     private ITwitterCache _memCache;
-    private ILogger<TwitterService> _logger;
-    private ISampleStreamV2 _sampleStream;
+    private ITwitterClient _twitterClient;
     private int tweetCount = 0;
     private Dictionary<string, int> hashTags = new Dictionary<string, int>();
 
     /// <summary>
-    /// A 
+    /// A Background service that calls the Twitter Sample Stream V2 API
     /// </summary>
-    /// <param name="sampleStream">A Sample Stream from the V2 twitter API that is expected to not be started.</param>
+    /// <param name="twitterClient">A configured TwitterClient.</param>
     /// <param name="memCache">A Memory Cache to save the twitter stream data.</param>
-    /// <param name="logger">Logger with the context of <see cref="TwitterService"/>.</param>
     /// <exception cref="ArgumentNullException">Thrown when any parameter passed in is null.</exception>
-    public TwitterService(ISampleStreamV2 sampleStream, ITwitterCache memCache, ILogger<TwitterService> logger)
+    public TwitterService(ITwitterClient twitterClient, ITwitterCache memCache)
     {
-        _sampleStream = sampleStream ?? throw new ArgumentNullException(nameof(sampleStream));
         _memCache = memCache ?? throw new ArgumentNullException(nameof(memCache));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _twitterClient = twitterClient ?? throw new ArgumentNullException(nameof(twitterClient));
     }
 
     /// <summary>
-    /// Starts the <see cref="ISampleStreamV2"/> and listens to the Tweet Recieved event.
+    /// Gets and starts a Sample Stream v2 from Twitter and listens to the Tweet Recieved event.
     /// </summary>
-    /// <param name="stoppingToken"></param>
-    /// <returns></returns>
+    /// <param name="stoppingToken">A cancellation token used to stop the Stream.</param>
+    /// <returns>A started <see cref="ISampleStreamV2"/>.</returns>
     public Task DoWorkAsync(CancellationToken stoppingToken)
     {
-        _logger.LogDebug("Starting the Twitter V2 Sample Stream");
-        _sampleStream.TweetReceived += (sender, eventArgs) =>
+        var sampleStream = _twitterClient.GetSampleStreamV2();
+        sampleStream.TweetReceived += (sender, eventArgs) =>
         {
             tweetCount++;
             _memCache.MemoryCache.Set(_memCache.TweetCountKey, tweetCount);
@@ -57,6 +53,6 @@ public class TwitterService : IScopedProcessingService
                 _memCache.MemoryCache.Set(_memCache.HashtagsKey, hashTags);
             }
         };
-        return _sampleStream.StartAsync();
+        return sampleStream.StartAsync();
     }
 }

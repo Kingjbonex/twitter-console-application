@@ -1,13 +1,15 @@
 ﻿using Spectre.Console;
 using Spectre.Console.Cli;
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace TwitterCLI;
 
-public sealed class SampleCommand : AsyncCommand<SampleCommand.Settings>
+public sealed class SampleCommand : AsyncCommandBase<SampleCommand.Settings>
 {
-    private readonly IScopedProcessingService[] _backgroundServices;
+    private readonly IScopedProcessingService _backgroundServices;
+    private readonly ITwitterCache _twitterCache;
+    private readonly ITwitterClient _twitterClient;
 
     public sealed class Settings : CommandSettings
     {
@@ -23,26 +25,96 @@ public sealed class SampleCommand : AsyncCommand<SampleCommand.Settings>
         [Description("Call Twitter v2 Sample Stream and output statistics")]
         public string TwitterBearerToken { get; set; }
 
-
         [CommandOption("--time <TIME>")]
         [Description("Amount of time to gather data in minutes")]
         public string Time { get; set; }
     }
 
-    public SampleCommand(IScopedProcessingService[] backgroundServices)
+    public SampleCommand(IScopedProcessingService backgroundServices, ITwitterClient twitterClient, ITwitterCache twitterCache)
     {
+        _twitterClient = twitterClient;
         _backgroundServices = backgroundServices;
+        _twitterCache = twitterCache;
     }
 
-    public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] Settings settings)
+    protected override async Task<int> OnExecuteAsync(CommandContext context, Settings settings)
     {
         var timeInMinutes = new TimeSpan(0, Convert.ToInt16(settings.Time), 0);
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource(timeInMinutes);
 
-        foreach(var service in _backgroundServices)
-        {
-            await service.DoWorkAsync(cancellationTokenSource.Token);
-        }
+        _twitterClient.ConfigureTwitterClient(settings);
+        _ = Task.Run(() => _backgroundServices.DoWorkAsync(cancellationTokenSource.Token));
+
+        int tweetCount = 0;
+        Dictionary<string, int>? hashtags = new Dictionary<string, int>();
+
+        var table = new Table().Expand().BorderColor(Color.Grey);
+        table.AddColumn(new TableColumn(new Panel("[yellow]Hashtag Count[/]").BorderColor(Color.Blue)).Footer("Tweet Count"));
+        table.AddColumn(new TableColumn(new Panel("[yellow]Hashtag[/]").BorderColor(Color.Blue)).Footer("0"));
+        table.AddEmptyRow();
+        table.AddEmptyRow();
+        table.AddEmptyRow();
+        table.AddEmptyRow();
+        table.AddEmptyRow();
+        table.AddEmptyRow();
+        table.AddEmptyRow();
+        table.AddEmptyRow();
+        table.AddEmptyRow();
+        table.AddEmptyRow();
+
+        AnsiConsole.Status()
+            .Start("Thinking...", ctx =>
+            {
+                AnsiConsole.MarkupLine("Starting up Twitter Sample Stream...");
+                Thread.Sleep(1000);
+
+                ctx.Status("Waiting for Sample Data to stream in...");
+                ctx.Spinner(Spinner.Known.Star);
+                ctx.SpinnerStyle(Style.Parse("green"));
+
+                AnsiConsole.MarkupLine($"Running Sample Stream Statistics for `{timeInMinutes.Minutes}` minutes...");
+                Thread.Sleep(2000);
+            });
+
+        await AnsiConsole.Live(table)
+            .AutoClear(false)
+            .Overflow(VerticalOverflow.Ellipsis)
+            .Cropping(VerticalOverflowCropping.Bottom)
+            .StartAsync(ctx =>
+            {
+                ctx.Refresh();
+                while (!cancellationTokenSource.Token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        if (_twitterCache.MemoryCache.TryGetValue<int>(_twitterCache.TweetCountKey, out tweetCount))
+                        {
+                            table.Columns[1].Footer = new Text(tweetCount.ToString());
+                        }
+
+                        if (_twitterCache.MemoryCache.TryGetValue<Dictionary<string, int>>(_twitterCache.HashtagsKey, out hashtags))
+                        {
+                            var sortedList = from kvp in hashtags
+                                             orderby kvp.Value descending
+                                             select kvp;
+
+                            int j = 0;
+                            foreach (KeyValuePair<string, int> kvp in sortedList.Take(10))
+                            {
+                                table.UpdateCell(j, 0, new Text(Convert.ToString(kvp.Value)));
+                                table.UpdateCell(j, 1, new Text(kvp.Key));
+                                j++;
+                            }
+                        }
+                        ctx.Refresh();
+                    }
+                    catch (Exception ex)
+                    {
+                        AnsiConsole.WriteException(ex);
+                    }
+                }
+                return Task.CompletedTask;
+            });
 
         return 0;
     }
