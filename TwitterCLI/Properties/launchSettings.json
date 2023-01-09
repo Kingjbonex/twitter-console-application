@@ -2,7 +2,7 @@
   "profiles": {
     "TwitterCLI": {
       "commandName": "Project",
-      "commandLineArgs": "sample --apikey 2QcUnO1W26POJv662KqMvyxZc --secretkey lFoM3uYsWqfMMeHbFMqBHrgJfr4TJyN28o2HlVwVWiNVSeMeDt --token AAAAAAAAAAAAAAAAAAAAAHilkwEAAAAApH%2Bg%2Bo7OVPVN5PWrhS2UDM6A2dU%3D54Q4ACScKJi8Ik7UN23H1A1PrDzare0piKMZNzzyG4s1Ed8nHG --time 1"
+      "commandLineArgs": "sample --time 1"
     }
   }
 }
