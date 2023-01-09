@@ -1,69 +1,35 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Tweetinvi;
-using Tweetinvi.Streaming.V2;
-using TwitterCLI;
+using Spectre.Console.Cli;
+using Spectre.Console.Extensions.Hosting;
 
-namespace TwitterCLI
+namespace TwitterCLI;
+
+public class Program
 {
-    public class Program
-    {
-        public static async Task<int> Main(string[] args)
-        {
-            using var host = CreateHostBuilder(args).Build();
+    public static async Task Main(string[] args) =>
+        await CreateHostBuilder(args)
+                .RunConsoleAsync();
 
-            await host.StartAsync();
-
-            return Environment.ExitCode;
-        }
-
-        private static IHostBuilder CreateHostBuilder(string[] args)
-        {
-            var builder = new HostBuilder()
-               .ConfigureHostConfiguration(configHost =>
-               {
-                   configHost.SetBasePath(Directory.GetCurrentDirectory());
-                   configHost.AddUserSecrets<Program>();
-               })
-               .ConfigureServices((services) =>
-               {
-                   var serviceProvider = services.BuildServiceProvider();
-                   var config = serviceProvider.GetService<IConfiguration>();
-                   string twitterKey = config.GetValue<string>("twitter_api_key"); // TODO: Handle Null values from configs to avoid failures down the line calling TwitterClient
-                   string secretKey = config.GetValue<string>("twitter_secret_key");
-                   string bearerToken = config.GetValue<string>("twitter_bearer_token");
-                   services.AddMemoryCache();
-                   services.AddSingleton<TwitterCache>();
-                   services.AddScoped<IScopedProcessingService, TwitterService>();
-                   services.AddHostedService<ConsoleService>();
-                   services.TryAddScoped<ISampleStreamV2>(s =>
-                   {
-                       return s.GetService<TwitterClient>().StreamsV2.CreateSampleStream();
-                   });
-                   services.TryAddTransient<Tweetinvi.Models.IReadOnlyConsumerCredentials>(s =>
-                   {
-                       return new Tweetinvi.Models.ConsumerOnlyCredentials(twitterKey, secretKey)
-                       {
-                           BearerToken = bearerToken,
-                       };
-                   });
-                   services.TryAddTransient<TwitterClient>(s =>
-                   {
-                       return new TwitterClient(s.GetService<Tweetinvi.Models.IReadOnlyConsumerCredentials>());
-                   });
-               })
-               .ConfigureLogging((hostingContext, logging) =>
-               {
-                   logging.AddConfiguration(hostingContext.Configuration);
-                   logging.AddConsole();
-                   logging.AddDebug();
-               });
-
-            builder.UseConsoleLifetime();
-            return builder;
-        }
-    }
+    private static IHostBuilder CreateHostBuilder(string[] args) =>
+        Host.CreateDefaultBuilder(args)
+            .UseConsoleLifetime()
+            .UseSpectreConsole(config =>
+            {
+                config.SetApplicationName("TwitterCLI");
+                config.CaseSensitivity(CaseSensitivity.None);
+                config.AddCommand<SampleCommand>("sample");
+                config.AddExample(new[] { "sample", "--apikey", "4QcUzO1326POJv662KqMvy3Zc", "--secretkey", "lFoM3uYsWqfMMeHbFMqBHrgJfr4TJyN28o2HlVwVWiNVSeMeDt", "--token", "AAAAAAAAAAA" });
+#if DEBUG
+                config.PropagateExceptions();
+                config.ValidateExamples();
+#endif
+            })
+            .ConfigureServices((context, services) =>
+            {
+                services.AddMemoryCache();
+                services.AddSingleton<ITwitterCache, TwitterCache>();
+                services.AddSingleton<IScopedProcessingService, TwitterService>();
+                services.AddSingleton<ITwitterClient, TwitterClient>();
+            });
 }
