@@ -1,18 +1,27 @@
-﻿using Tweetinvi.Streaming.V2;
+﻿using System.Configuration;
+using Tweetinvi.Streaming.V2;
 
 namespace TwitterCLI;
 
 public class TwitterClient : ITwitterClient
 {
-    private Tweetinvi.TwitterClient _twitterClient;
+    private bool _isConfigured = false;
+    private Tweetinvi.TwitterClient? _twitterClient;
 
     /// <summary>
     /// Creates a Sample Stream v2 from the Twitter API.
     /// </summary>
-    /// <returns></returns>
+    /// <returns>An instance of <see cref="ISampleStreamV2"/>. </returns>
     public ISampleStreamV2 GetSampleStreamV2()
     {
-        return _twitterClient.StreamsV2.CreateSampleStream();
+        if(_isConfigured)
+        {
+            return _twitterClient!.StreamsV2.CreateSampleStream();
+        }
+        else
+        {
+            throw new ConfigurationErrorsException("The TwitterClient hasn't been configured. Please call ConfigureTwitterClient before calling GetSampleStreamV2.");
+        }        
     }
 
     /// <summary>
@@ -26,5 +35,6 @@ public class TwitterClient : ITwitterClient
             BearerToken = settings.TwitterBearerToken,
         };
         _twitterClient = new Tweetinvi.TwitterClient(creds);
+        _isConfigured = true;
     }
 }

@@ -2,9 +2,11 @@
 using Spectre.Console.Cli;
 using System.ComponentModel;
 using Microsoft.Extensions.Caching.Memory;
+using System.Configuration;
 
 namespace TwitterCLI;
 
+[Description("Stream tweets from Twitter and output statistics on the incoming tweets.")]
 public sealed class SampleCommand : AsyncCommandBase<SampleCommand.Settings>
 {
     private readonly IScopedProcessingService _backgroundServices;
@@ -15,26 +17,27 @@ public sealed class SampleCommand : AsyncCommandBase<SampleCommand.Settings>
     {
         [CommandOption("--apikey <APIKEY>")]
         [Description("Call Twitter v2 Sample Stream and output statistics")]
-        public string TwitterApiKey { get; set; }
+        public string? TwitterApiKey { get; set; }
 
         [CommandOption("--secretkey <SECRETKEY>")]
         [Description("Call Twitter v2 Sample Stream and output statistics")]
-        public string TwitterSecretKey { get; set; }
+        public string? TwitterSecretKey { get; set; }
 
         [CommandOption("--token <TOKEN>")]
         [Description("Call Twitter v2 Sample Stream and output statistics")]
-        public string TwitterBearerToken { get; set; }
+        public string? TwitterBearerToken { get; set; }
 
         [CommandOption("--time <TIME>")]
         [Description("Amount of time to gather data in minutes")]
-        public string Time { get; set; }
+        [DefaultValue("5")]
+        public string? Time { get; set; }
     }
 
     public SampleCommand(IScopedProcessingService backgroundServices, ITwitterClient twitterClient, ITwitterCache twitterCache)
     {
-        _twitterClient = twitterClient;
-        _backgroundServices = backgroundServices;
-        _twitterCache = twitterCache;
+        _backgroundServices = backgroundServices ?? throw new ArgumentNullException(nameof(backgroundServices));
+        _twitterClient = twitterClient ?? throw new ArgumentNullException(nameof(twitterClient));
+        _twitterCache = twitterCache ?? throw new ArgumentNullException(nameof(twitterCache));
     }
 
     protected override async Task<int> OnExecuteAsync(CommandContext context, Settings settings)
@@ -42,13 +45,21 @@ public sealed class SampleCommand : AsyncCommandBase<SampleCommand.Settings>
         var timeInMinutes = new TimeSpan(0, Convert.ToInt16(settings.Time), 0);
         CancellationTokenSource cancellationTokenSource = new CancellationTokenSource(timeInMinutes);
 
-        _twitterClient.ConfigureTwitterClient(settings);
+
+        if (settings.TwitterBearerToken != null && settings.TwitterSecretKey != null && settings.TwitterApiKey != null)
+        {
+            _twitterClient.ConfigureTwitterClient(settings);
+        }
+        else
+        {
+            throw new ConfigurationErrorsException("You need to call ");
+        }
         _ = Task.Run(() => _backgroundServices.DoWorkAsync(cancellationTokenSource.Token));
 
         int tweetCount = 0;
         Dictionary<string, int>? hashtags = new Dictionary<string, int>();
 
-        var table = new Table().Expand().BorderColor(Color.Grey);
+        var table = new Table().Border(TableBorder.AsciiDoubleHead);
         table.AddColumn(new TableColumn(new Panel("[yellow]Hashtag Count[/]").BorderColor(Color.Blue)).Footer("Tweet Count"));
         table.AddColumn(new TableColumn(new Panel("[yellow]Hashtag[/]").BorderColor(Color.Blue)).Footer("0"));
         table.AddEmptyRow();

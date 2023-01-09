@@ -1,18 +1,13 @@
 ﻿using NUnit.Framework;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace TwitterCLI.Tests
+namespace TwitterCLI.Tests;
+
+[TestFixture]
+public class EndToEndFixture
 {
-    [TestFixture]
-    public class EndToEndFixture
+    [Test]
+    public void DoIt()
     {
-        public void DoIt()
-        {
-
-        }
+        //TODO: Write an end-to-end test
     }
 }

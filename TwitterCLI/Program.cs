@@ -15,13 +15,16 @@ public class Program
         Host.CreateDefaultBuilder(args)
             .UseConsoleLifetime()
             .UseSpectreConsole(config =>
-                {
-                    config.AddCommand<SampleCommand>("sample");
+            {
+                config.SetApplicationName("TwitterCLI");
+                config.CaseSensitivity(CaseSensitivity.None);
+                config.AddCommand<SampleCommand>("sample");
+                config.AddExample(new[] { "sample", "--apikey", "4QcUzO1326POJv662KqMvy3Zc", "--secretkey", "lFoM3uYsWqfMMeHbFMqBHrgJfr4TJyN28o2HlVwVWiNVSeMeDt", "--token", "AAAAAAAAAAA" });
 #if DEBUG
-                    config.PropagateExceptions();
-                    config.ValidateExamples();
+                config.PropagateExceptions();
+                config.ValidateExamples();
 #endif
-                })
+            })
             .ConfigureServices((context, services) =>
             {
                 services.AddMemoryCache();

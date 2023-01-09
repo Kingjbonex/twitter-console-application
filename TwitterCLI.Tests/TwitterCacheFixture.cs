@@ -1,20 +1,16 @@
-﻿using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
-using Moq;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 
-namespace TwitterCLI.Tests
+namespace TwitterCLI.Tests;
+
+[TestFixture]
+public class TwitterCacheFixture
 {
-    [TestFixture]
-    public class TwitterCacheFixture
+    [Test]
+    public void Constructor_ShouldThrow_WhenMemoryCacheIsNull()
     {
-        [Test]
-        public void Constructor_ShouldThrow_WhenMemoryCacheIsNull()
+        Assert.That(() =>
         {
-            Assert.That(() =>
-            {
-                return new TwitterCache(null);
-            }, Throws.TypeOf<ArgumentNullException>());
-        }
+            return new TwitterCache(null);
+        }, Throws.TypeOf<ArgumentNullException>());
     }
 }
